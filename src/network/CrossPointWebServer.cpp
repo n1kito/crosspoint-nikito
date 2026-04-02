@@ -1222,6 +1222,7 @@ void CrossPointWebServer::handlePostSettings() {
     }
   }
 
+  SETTINGS.syncStatusBarMode();
   SETTINGS.saveToFile();
 
   LOG_DBG("WEB", "Applied %d setting(s)", applied);

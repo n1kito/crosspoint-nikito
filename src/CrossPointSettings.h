@@ -42,6 +42,8 @@ class CrossPointSettings {
     BOOK_PROGRESS_BAR = 3,
     ONLY_BOOK_PROGRESS_BAR = 4,
     CHAPTER_PROGRESS_BAR = 5,
+    CHAPTER_BAR_ONLY = 6,
+    CUSTOM_STATUS_BAR = 7,
     STATUS_BAR_MODE_COUNT
   };
   enum STATUS_BAR_PROGRESS_BAR {
@@ -215,6 +217,9 @@ class CrossPointSettings {
 
   bool saveToFile() const;
   bool loadFromFile();
+  void applyStatusBarMode(uint8_t mode);
+  uint8_t deriveStatusBarMode() const;
+  void syncStatusBarMode();
 
   static void validateFrontButtonMapping(CrossPointSettings& settings);
 

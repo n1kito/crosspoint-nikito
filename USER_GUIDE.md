@@ -138,7 +138,9 @@ The Settings screen allows you to configure the device's behavior. There are a f
   - "Full w/ Percentage" - Show status bar with book progress (as percentage)
   - "Full w/ Book Bar" - Show status bar with book progress (as bar)
   - "Book Bar Only" - Show book progress (as bar)
+  - "Chapter Bar Only" - Show chapter progress (as bar)
   - "Full w/ Chapter Bar" - Show status bar with chapter progress (as bar)
+- **Customise Status Bar**: Fine-tune the chapter page count, book progress percentage, progress bar, title, and battery indicators shown while reading.
 - **Hide Battery %**: Configure where to suppress the battery percentage display in the status bar; the battery icon will still be shown:
   - "Never" (default) - Always show battery percentage
   - "In Reader" - Show battery percentage everywhere except in reading mode

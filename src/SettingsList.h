@@ -65,6 +65,13 @@ inline const std::vector<SettingInfo>& getSettingsList() {
       SettingInfo::Enum(StrId::STR_IMAGES, &CrossPointSettings::imageRendering,
                         {StrId::STR_IMAGES_DISPLAY, StrId::STR_IMAGES_PLACEHOLDER, StrId::STR_IMAGES_SUPPRESS},
                         "imageRendering", StrId::STR_CAT_READER),
+      SettingInfo::DynamicEnum(
+          StrId::STR_STATUS_BAR,
+          {StrId::STR_NONE_OPT, StrId::STR_STATUS_BAR_NO_PROGRESS, StrId::STR_STATUS_BAR_FULL,
+           StrId::STR_STATUS_BAR_BOOK_BAR, StrId::STR_STATUS_BAR_BOOK_BAR_ONLY,
+           StrId::STR_STATUS_BAR_CHAPTER_BAR, StrId::STR_STATUS_BAR_CHAPTER_BAR_ONLY, StrId::STR_CUSTOM},
+          [] { return SETTINGS.statusBar; },
+          [](uint8_t v) { SETTINGS.applyStatusBarMode(v); }, "statusBar", StrId::STR_CAT_READER),
       // --- Controls ---
       SettingInfo::Enum(StrId::STR_SIDE_BTN_LAYOUT, &CrossPointSettings::sideButtonLayout,
                         {StrId::STR_PREV_NEXT, StrId::STR_NEXT_PREV}, "sideButtonLayout", StrId::STR_CAT_CONTROLS),

@@ -76,6 +76,106 @@ void CrossPointSettings::validateFrontButtonMapping(CrossPointSettings& settings
   }
 }
 
+void CrossPointSettings::applyStatusBarMode(uint8_t mode) {
+  statusBar = mode;
+
+  switch (static_cast<STATUS_BAR_MODE>(mode)) {
+    case NONE:
+      statusBarChapterPageCount = 0;
+      statusBarBookProgressPercentage = 0;
+      statusBarProgressBar = HIDE_PROGRESS;
+      statusBarTitle = HIDE_TITLE;
+      statusBarBattery = 0;
+      break;
+    case NO_PROGRESS:
+      statusBarChapterPageCount = 0;
+      statusBarBookProgressPercentage = 0;
+      statusBarProgressBar = HIDE_PROGRESS;
+      statusBarTitle = CHAPTER_TITLE;
+      statusBarBattery = 1;
+      break;
+    case BOOK_PROGRESS_BAR:
+      statusBarChapterPageCount = 1;
+      statusBarBookProgressPercentage = 0;
+      statusBarProgressBar = BOOK_PROGRESS;
+      statusBarTitle = CHAPTER_TITLE;
+      statusBarBattery = 1;
+      break;
+    case ONLY_BOOK_PROGRESS_BAR:
+      statusBarChapterPageCount = 1;
+      statusBarBookProgressPercentage = 0;
+      statusBarProgressBar = BOOK_PROGRESS;
+      statusBarTitle = HIDE_TITLE;
+      statusBarBattery = 0;
+      break;
+    case CHAPTER_PROGRESS_BAR:
+      statusBarChapterPageCount = 0;
+      statusBarBookProgressPercentage = 1;
+      statusBarProgressBar = CHAPTER_PROGRESS;
+      statusBarTitle = CHAPTER_TITLE;
+      statusBarBattery = 1;
+      break;
+    case CHAPTER_BAR_ONLY:
+      statusBarChapterPageCount = 0;
+      statusBarBookProgressPercentage = 0;
+      statusBarProgressBar = CHAPTER_PROGRESS;
+      statusBarTitle = HIDE_TITLE;
+      statusBarBattery = 0;
+      break;
+    case FULL:
+      statusBarChapterPageCount = 1;
+      statusBarBookProgressPercentage = 1;
+      statusBarProgressBar = HIDE_PROGRESS;
+      statusBarTitle = CHAPTER_TITLE;
+      statusBarBattery = 1;
+      break;
+    case CUSTOM_STATUS_BAR:
+    default:
+      break;
+  }
+}
+
+uint8_t CrossPointSettings::deriveStatusBarMode() const {
+  if (!statusBarChapterPageCount && !statusBarBookProgressPercentage && statusBarProgressBar == HIDE_PROGRESS &&
+      statusBarTitle == HIDE_TITLE && !statusBarBattery) {
+    return NONE;
+  }
+
+  if (!statusBarChapterPageCount && !statusBarBookProgressPercentage && statusBarProgressBar == HIDE_PROGRESS &&
+      statusBarTitle == CHAPTER_TITLE && statusBarBattery) {
+    return NO_PROGRESS;
+  }
+
+  if (statusBarChapterPageCount && statusBarBookProgressPercentage && statusBarProgressBar == HIDE_PROGRESS &&
+      statusBarTitle == CHAPTER_TITLE && statusBarBattery) {
+    return FULL;
+  }
+
+  if (statusBarChapterPageCount && !statusBarBookProgressPercentage && statusBarProgressBar == BOOK_PROGRESS &&
+      statusBarTitle == CHAPTER_TITLE && statusBarBattery) {
+    return BOOK_PROGRESS_BAR;
+  }
+
+  if (statusBarChapterPageCount && !statusBarBookProgressPercentage && statusBarProgressBar == BOOK_PROGRESS &&
+      statusBarTitle == HIDE_TITLE && !statusBarBattery) {
+    return ONLY_BOOK_PROGRESS_BAR;
+  }
+
+  if (!statusBarChapterPageCount && statusBarBookProgressPercentage && statusBarProgressBar == CHAPTER_PROGRESS &&
+      statusBarTitle == CHAPTER_TITLE && statusBarBattery) {
+    return CHAPTER_PROGRESS_BAR;
+  }
+
+  if (!statusBarChapterPageCount && !statusBarBookProgressPercentage && statusBarProgressBar == CHAPTER_PROGRESS &&
+      statusBarTitle == HIDE_TITLE && !statusBarBattery) {
+    return CHAPTER_BAR_ONLY;
+  }
+
+  return CUSTOM_STATUS_BAR;
+}
+
+void CrossPointSettings::syncStatusBarMode() { statusBar = deriveStatusBarMode(); }
+
 bool CrossPointSettings::saveToFile() const {
   Storage.mkdir("/.crosspoint");
   return JsonSettingsIO::saveSettings(*this, SETTINGS_FILE_JSON);
@@ -219,6 +319,8 @@ bool CrossPointSettings::loadFromBinaryFile() {
   } else {
     applyLegacyFrontButtonLayout(*this);
   }
+
+  applyStatusBarMode(statusBar);
 
   inputFile.close();
   LOG_DBG("CPS", "Settings loaded from binary file");
