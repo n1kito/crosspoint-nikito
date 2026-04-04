@@ -41,6 +41,10 @@ int clampPercent(int percent) {
   return percent;
 }
 
+bool hideStatusBarByDefault(const bool temporarilyVisible) {
+  return SETTINGS.showStatusBarOnLongPress && !temporarilyVisible;
+}
+
 }  // namespace
 
 void EpubReaderActivity::onEnter() {
@@ -109,6 +113,11 @@ void EpubReaderActivity::loop() {
     return;
   }
 
+  if (showStatusBarUntilMs != 0UL && millis() >= showStatusBarUntilMs) {
+    showStatusBarUntilMs = 0UL;
+    requestUpdate();
+  }
+
   if (automaticPageTurnActive) {
     if (mappedInput.wasReleased(MappedInputManager::Button::Confirm) ||
         mappedInput.wasReleased(MappedInputManager::Button::Back)) {
@@ -135,8 +144,21 @@ void EpubReaderActivity::loop() {
     }
   }
 
+  if (SETTINGS.showStatusBarOnLongPress && !suppressNextConfirmRelease &&
+      mappedInput.isPressed(MappedInputManager::Button::Confirm) &&
+      mappedInput.getHeldTime() >= CONFIRM_LONG_PRESS_MS) {
+    showStatusBarUntilMs = millis() + SHOW_STATUS_BAR_MS;
+    suppressNextConfirmRelease = true;
+    requestUpdate();
+    return;
+  }
+
   // Enter reader menu activity.
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+    if (suppressNextConfirmRelease) {
+      suppressNextConfirmRelease = false;
+      return;
+    }
     const int currentPage = section ? section->currentPage + 1 : 0;
     const int totalPages = section ? section->pageCount : 0;
     float bookProgress = 0.0f;
@@ -442,7 +464,10 @@ void EpubReaderActivity::toggleAutoPageTurn(const uint8_t selectedPageTurnOption
   pageTurnDuration = (1UL * 60 * 1000) / PAGE_TURN_LABELS[selectedPageTurnOption];
   automaticPageTurnActive = true;
 
-  const uint8_t statusBarHeight = UITheme::getInstance().getStatusBarHeight();
+  const bool temporarilyShowStatusBar = shouldTemporarilyShowStatusBar();
+  const uint8_t statusBarHeight = hideStatusBarByDefault(temporarilyShowStatusBar)
+                                      ? 0
+                                      : UITheme::getInstance().getStatusBarHeight();
   // resets cached section so that space is reserved for auto page turn indicator when None or progress bar only
   if (statusBarHeight == 0 || statusBarHeight == UITheme::getInstance().getProgressBarHeight()) {
     // Preserve current reading position so we can restore after reflow.
@@ -518,7 +543,10 @@ void EpubReaderActivity::render(RenderLock&& lock) {
   orientedMarginLeft += SETTINGS.screenMargin;
   orientedMarginRight += SETTINGS.screenMargin;
 
-  const uint8_t statusBarHeight = UITheme::getInstance().getStatusBarHeight();
+  const bool temporarilyShowStatusBar = shouldTemporarilyShowStatusBar();
+  const uint8_t statusBarHeight = hideStatusBarByDefault(temporarilyShowStatusBar)
+                                      ? 0
+                                      : UITheme::getInstance().getStatusBarHeight();
 
   // reserves space for automatic page turn indicator when no status bar or progress bar only
   if (automaticPageTurnActive &&
@@ -601,7 +629,7 @@ void EpubReaderActivity::render(RenderLock&& lock) {
   if (section->pageCount == 0) {
     LOG_DBG("ERS", "No pages to render");
     renderer.drawCenteredText(UI_12_FONT_ID, 300, tr(STR_EMPTY_CHAPTER), true, EpdFontFamily::BOLD);
-    renderStatusBar();
+    renderStatusBar(temporarilyShowStatusBar);
     renderer.displayBuffer();
     automaticPageTurnActive = false;
     return;
@@ -610,7 +638,7 @@ void EpubReaderActivity::render(RenderLock&& lock) {
   if (section->currentPage < 0 || section->currentPage >= section->pageCount) {
     LOG_DBG("ERS", "Page out of bounds: %d (max %d)", section->currentPage, section->pageCount);
     renderer.drawCenteredText(UI_12_FONT_ID, 300, tr(STR_OUT_OF_BOUNDS), true, EpdFontFamily::BOLD);
-    renderStatusBar();
+    renderStatusBar(temporarilyShowStatusBar);
     renderer.displayBuffer();
     automaticPageTurnActive = false;
     return;
@@ -716,7 +744,7 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
   bool imagePageWithAA = page->hasImages() && SETTINGS.textAntiAliasing;
 
   page->render(renderer, SETTINGS.getReaderFontId(), orientedMarginLeft, orientedMarginTop);
-  renderStatusBar();
+  renderStatusBar(shouldTemporarilyShowStatusBar());
   fcm->logStats("bw_render");
   const auto tBwRender = millis();
 
@@ -793,7 +821,15 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
   }
 }
 
-void EpubReaderActivity::renderStatusBar() const {
+bool EpubReaderActivity::shouldTemporarilyShowStatusBar() const {
+  return showStatusBarUntilMs != 0UL && millis() < showStatusBarUntilMs;
+}
+
+void EpubReaderActivity::renderStatusBar(const bool forceVisible) {
+  if (hideStatusBarByDefault(forceVisible)) {
+    return;
+  }
+
   // Calculate progress in book
   const int currentPage = section->currentPage + 1;
   const float pageCount = section->pageCount;

@@ -20,6 +20,10 @@ constexpr size_t CHUNK_SIZE = 8 * 1024;  // 8KB chunk for reading
 // Cache file magic and version
 constexpr uint32_t CACHE_MAGIC = 0x54585449;  // "TXTI"
 constexpr uint8_t CACHE_VERSION = 2;          // Increment when cache format changes
+
+bool hideStatusBarByDefault(const bool temporarilyVisible) {
+  return SETTINGS.showStatusBarOnLongPress && !temporarilyVisible;
+}
 }  // namespace
 
 void TxtReaderActivity::onEnter() {
@@ -58,6 +62,18 @@ void TxtReaderActivity::onExit() {
 }
 
 void TxtReaderActivity::loop() {
+  if (showStatusBarUntilMs != 0UL && millis() >= showStatusBarUntilMs) {
+    showStatusBarUntilMs = 0UL;
+    requestUpdate();
+  }
+
+  if (SETTINGS.showStatusBarOnLongPress && mappedInput.isPressed(MappedInputManager::Button::Confirm) &&
+      mappedInput.getHeldTime() >= CONFIRM_LONG_PRESS_MS) {
+    showStatusBarUntilMs = millis() + SHOW_STATUS_BAR_MS;
+    requestUpdate();
+    return;
+  }
+
   // Long press BACK (1s+) goes to file selection
   if (mappedInput.isPressed(MappedInputManager::Button::Back) && mappedInput.getHeldTime() >= ReaderUtils::GO_HOME_MS) {
     activityManager.goToFileBrowser(txt ? txt->getPath() : "");
@@ -101,8 +117,8 @@ void TxtReaderActivity::initializeReader() {
   cachedOrientedMarginTop += cachedScreenMargin;
   cachedOrientedMarginLeft += cachedScreenMargin;
   cachedOrientedMarginRight += cachedScreenMargin;
-  cachedOrientedMarginBottom +=
-      std::max(cachedScreenMargin, static_cast<uint8_t>(UITheme::getInstance().getStatusBarHeight()));
+  const uint8_t statusBarHeight = hideStatusBarByDefault(false) ? 0 : UITheme::getInstance().getStatusBarHeight();
+  cachedOrientedMarginBottom += std::max(cachedScreenMargin, static_cast<uint8_t>(statusBarHeight));
 
   viewportWidth = renderer.getScreenWidth() - cachedOrientedMarginLeft - cachedOrientedMarginRight;
   const int viewportHeight = renderer.getScreenHeight() - cachedOrientedMarginTop - cachedOrientedMarginBottom;
@@ -373,7 +389,7 @@ void TxtReaderActivity::renderPage() {
 
   // BW rendering
   renderLines();
-  renderStatusBar();
+  renderStatusBar(shouldTemporarilyShowStatusBar());
 
   ReaderUtils::displayWithRefreshCycle(renderer, pagesUntilFullRefresh);
 
@@ -383,12 +399,21 @@ void TxtReaderActivity::renderPage() {
   // scope destructor clears font cache via FontCacheManager
 }
 
-void TxtReaderActivity::renderStatusBar() const {
+bool TxtReaderActivity::shouldTemporarilyShowStatusBar() const {
+  return showStatusBarUntilMs != 0UL && millis() < showStatusBarUntilMs;
+}
+
+void TxtReaderActivity::renderStatusBar(const bool forceVisible) {
+  if (hideStatusBarByDefault(forceVisible)) {
+    return;
+  }
+
   const float progress = totalPages > 0 ? (currentPage + 1) * 100.0f / totalPages : 0;
   std::string title;
   if (SETTINGS.statusBarTitle != CrossPointSettings::STATUS_BAR_TITLE::HIDE_TITLE) {
     title = txt->getTitle();
   }
+
   GUI.drawStatusBar(renderer, progress, currentPage + 1, totalPages, title);
 }
 

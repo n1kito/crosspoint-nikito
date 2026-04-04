@@ -54,6 +54,20 @@ def get_base_version(project_dir):
     return config.get('crosspoint', 'version')
 
 
+def get_dev_label(project_dir):
+    ini_path = os.path.join(project_dir, 'platformio.ini')
+    if not os.path.isfile(ini_path):
+        return 'dev'
+    config = configparser.ConfigParser()
+    config.read(ini_path)
+    if not config.has_option('crosspoint', 'dev_label'):
+        return 'dev'
+    label = config.get('crosspoint', 'dev_label').strip()
+    if not label:
+        return 'dev'
+    return ''.join(c for c in label if c not in '"\\')
+
+
 def inject_version(env):
     # Only applies to the dev (default) environment; release envs set the
     # version via build_flags in platformio.ini and are unaffected.
@@ -63,7 +77,8 @@ def inject_version(env):
     project_dir = env['PROJECT_DIR']
     base_version = get_base_version(project_dir)
     branch = get_git_branch(project_dir)
-    version_string = f'{base_version}-dev+{branch}'
+    dev_label = get_dev_label(project_dir)
+    version_string = f'{base_version}-{dev_label}+{branch}'
 
     env.Append(CPPDEFINES=[('CROSSPOINT_VERSION', f'\\"{version_string}\\"')])
     print(f'CrossPoint build version: {version_string}')

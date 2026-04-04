@@ -8,6 +8,8 @@
 #include "activities/Activity.h"
 
 class TxtReaderActivity final : public Activity {
+  static constexpr unsigned long SHOW_STATUS_BAR_MS = 5000UL;
+  static constexpr unsigned long CONFIRM_LONG_PRESS_MS = 700UL;
   std::unique_ptr<Txt> txt;
 
   int currentPage = 0;
@@ -20,6 +22,7 @@ class TxtReaderActivity final : public Activity {
   int linesPerPage = 0;
   int viewportWidth = 0;
   bool initialized = false;
+  unsigned long showStatusBarUntilMs = 0UL;
 
   // Cached settings for cache validation (different fonts/margins require re-indexing)
   int cachedFontId = 0;
@@ -31,7 +34,8 @@ class TxtReaderActivity final : public Activity {
   int cachedOrientedMarginLeft = 0;
 
   void renderPage();
-  void renderStatusBar() const;
+  void renderStatusBar(bool forceVisible = false);
+  bool shouldTemporarilyShowStatusBar() const;
 
   void initializeReader();
   bool loadPageAtOffset(size_t offset, std::vector<std::string>& outLines, size_t& nextOffset);

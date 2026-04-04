@@ -53,6 +53,14 @@ void SettingsActivity::onEnter() {
   systemSettings.push_back(SettingInfo::Action(StrId::STR_CHECK_UPDATES, SettingAction::CheckForUpdates));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_LANGUAGE, SettingAction::Language));
   readerSettings.push_back(SettingInfo::Action(StrId::STR_CUSTOMISE_STATUS_BAR, SettingAction::CustomiseStatusBar));
+  for (auto it = readerSettings.begin(); it != readerSettings.end(); ++it) {
+    if (it->nameId == StrId::STR_SHOW_STATUS_BAR_LONG_PRESS) {
+      const auto setting = *it;
+      readerSettings.erase(it);
+      readerSettings.push_back(setting);
+      break;
+    }
+  }
 
   // Reset selection to first category
   selectedCategoryIndex = 0;

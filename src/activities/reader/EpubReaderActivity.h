@@ -7,6 +7,8 @@
 #include "activities/Activity.h"
 
 class EpubReaderActivity final : public Activity {
+  static constexpr unsigned long SHOW_STATUS_BAR_MS = 5000UL;
+  static constexpr unsigned long CONFIRM_LONG_PRESS_MS = 700UL;
   std::shared_ptr<Epub> epub;
   std::unique_ptr<Section> section = nullptr;
   int currentSpineIndex = 0;
@@ -27,6 +29,8 @@ class EpubReaderActivity final : public Activity {
   bool pendingScreenshot = false;
   bool skipNextButtonCheck = false;  // Skip button processing for one frame after subactivity exit
   bool automaticPageTurnActive = false;
+  bool suppressNextConfirmRelease = false;
+  unsigned long showStatusBarUntilMs = 0UL;
 
   // Footnote support
   std::vector<FootnoteEntry> currentPageFootnotes;
@@ -40,7 +44,8 @@ class EpubReaderActivity final : public Activity {
 
   void renderContents(std::unique_ptr<Page> page, int orientedMarginTop, int orientedMarginRight,
                       int orientedMarginBottom, int orientedMarginLeft);
-  void renderStatusBar() const;
+  void renderStatusBar(bool forceVisible = false);
+  bool shouldTemporarilyShowStatusBar() const;
   void silentIndexNextChapterIfNeeded(uint16_t viewportWidth, uint16_t viewportHeight);
   void saveProgress(int spineIndex, int currentPage, int pageCount);
   // Jump to a percentage of the book (0-100), mapping it to spine and page.
