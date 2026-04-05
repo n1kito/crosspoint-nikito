@@ -1,8 +1,11 @@
 #include "EpubReaderMenuActivity.h"
 
+#include <algorithm>
+
 #include <GfxRenderer.h>
 #include <I18n.h>
 
+#include "CrossPointSettings.h"
 #include "MappedInputManager.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -21,11 +24,16 @@ EpubReaderMenuActivity::EpubReaderMenuActivity(GfxRenderer& renderer, MappedInpu
 
 std::vector<EpubReaderMenuActivity::MenuItem> EpubReaderMenuActivity::buildMenuItems(bool hasFootnotes) {
   std::vector<MenuItem> items;
-  items.reserve(10);
+  items.reserve(15);
   items.push_back({MenuAction::SELECT_CHAPTER, StrId::STR_SELECT_CHAPTER});
   if (hasFootnotes) {
     items.push_back({MenuAction::FOOTNOTES, StrId::STR_FOOTNOTES});
   }
+  items.push_back({MenuAction::FONT_SIZE, StrId::STR_FONT_SIZE});
+  items.push_back({MenuAction::LINE_SPACING, StrId::STR_LINE_SPACING});
+  items.push_back({MenuAction::SCREEN_MARGIN, StrId::STR_SCREEN_MARGIN});
+  items.push_back({MenuAction::PARAGRAPH_ALIGNMENT, StrId::STR_PARA_ALIGNMENT});
+  items.push_back({MenuAction::HYPHENATION, StrId::STR_HYPHENATION});
   items.push_back({MenuAction::ROTATE_SCREEN, StrId::STR_ORIENTATION});
   items.push_back({MenuAction::AUTO_PAGE_TURN, StrId::STR_AUTO_TURN_PAGES_PER_MIN});
   items.push_back({MenuAction::GO_TO_PERCENT, StrId::STR_GO_TO_PERCENT});
@@ -71,13 +79,53 @@ void EpubReaderMenuActivity::loop() {
       return;
     }
 
-    setResult(MenuResult{static_cast<int>(selectedAction), pendingOrientation, selectedPageTurnOption});
+    if (selectedAction == MenuAction::FONT_SIZE) {
+      SETTINGS.fontSize = (SETTINGS.fontSize + 1) % CrossPointSettings::FONT_SIZE_COUNT;
+      SETTINGS.saveToFile();
+      settingsChanged = true;
+      requestUpdate();
+      return;
+    }
+
+    if (selectedAction == MenuAction::LINE_SPACING) {
+      SETTINGS.lineSpacing = (SETTINGS.lineSpacing + 1) % CrossPointSettings::LINE_COMPRESSION_COUNT;
+      SETTINGS.saveToFile();
+      settingsChanged = true;
+      requestUpdate();
+      return;
+    }
+
+    if (selectedAction == MenuAction::SCREEN_MARGIN) {
+      SETTINGS.screenMargin = (SETTINGS.screenMargin >= 40) ? 5 : SETTINGS.screenMargin + 5;
+      SETTINGS.saveToFile();
+      settingsChanged = true;
+      requestUpdate();
+      return;
+    }
+
+    if (selectedAction == MenuAction::PARAGRAPH_ALIGNMENT) {
+      SETTINGS.paragraphAlignment = (SETTINGS.paragraphAlignment + 1) % CrossPointSettings::PARAGRAPH_ALIGNMENT_COUNT;
+      SETTINGS.saveToFile();
+      settingsChanged = true;
+      requestUpdate();
+      return;
+    }
+
+    if (selectedAction == MenuAction::HYPHENATION) {
+      SETTINGS.hyphenationEnabled = !SETTINGS.hyphenationEnabled;
+      SETTINGS.saveToFile();
+      settingsChanged = true;
+      requestUpdate();
+      return;
+    }
+
+    setResult(MenuResult{static_cast<int>(selectedAction), pendingOrientation, selectedPageTurnOption, settingsChanged});
     finish();
     return;
   } else if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     ActivityResult result;
     result.isCancelled = true;
-    result.data = MenuResult{-1, pendingOrientation, selectedPageTurnOption};
+    result.data = MenuResult{-1, pendingOrientation, selectedPageTurnOption, settingsChanged};
     setResult(std::move(result));
     finish();
     return;
@@ -122,10 +170,26 @@ void EpubReaderMenuActivity::render(RenderLock&&) {
   // Menu Items
   const int startY = 75 + contentY;
   constexpr int lineHeight = 30;
+  const int footerReservedHeight = 35;
+  const int availableHeight = renderer.getScreenHeight() - startY - footerReservedHeight;
+  const int maxVisibleItems = std::max(1, availableHeight / lineHeight);
+  int firstVisibleIndex = 0;
+  if (static_cast<int>(menuItems.size()) > maxVisibleItems) {
+    const int centeredStart = selectedIndex - (maxVisibleItems / 2);
+    const int maxStart = static_cast<int>(menuItems.size()) - maxVisibleItems;
+    firstVisibleIndex = std::max(0, std::min(centeredStart, maxStart));
+  }
+  const int endVisibleIndex = std::min(static_cast<int>(menuItems.size()), firstVisibleIndex + maxVisibleItems);
 
-  for (size_t i = 0; i < menuItems.size(); ++i) {
-    const int displayY = startY + (i * lineHeight);
-    const bool isSelected = (static_cast<int>(i) == selectedIndex);
+  const std::vector<StrId> fontSizeLabels = {StrId::STR_SMALL, StrId::STR_MEDIUM, StrId::STR_LARGE,
+                                             StrId::STR_X_LARGE};
+  const std::vector<StrId> lineSpacingLabels = {StrId::STR_TIGHT, StrId::STR_NORMAL, StrId::STR_WIDE};
+  const std::vector<StrId> paragraphAlignmentLabels = {StrId::STR_JUSTIFY, StrId::STR_ALIGN_LEFT, StrId::STR_CENTER,
+                                                       StrId::STR_ALIGN_RIGHT, StrId::STR_BOOK_S_STYLE};
+
+  for (int i = firstVisibleIndex; i < endVisibleIndex; ++i) {
+    const int displayY = startY + ((i - firstVisibleIndex) * lineHeight);
+    const bool isSelected = (i == selectedIndex);
 
     if (isSelected) {
       // Highlight only the content area so we don't paint over hint gutters.
@@ -134,18 +198,41 @@ void EpubReaderMenuActivity::render(RenderLock&&) {
 
     renderer.drawText(UI_10_FONT_ID, contentX + 20, displayY, I18N.get(menuItems[i].labelId), !isSelected);
 
-    if (menuItems[i].action == MenuAction::ROTATE_SCREEN) {
-      // Render current orientation value on the right edge of the content area.
-      const char* value = I18N.get(orientationLabels[pendingOrientation]);
+    const auto drawValue = [this, contentX, contentWidth, displayY, isSelected](const char* value) {
       const auto width = renderer.getTextWidth(UI_10_FONT_ID, value);
       renderer.drawText(UI_10_FONT_ID, contentX + contentWidth - 20 - width, displayY, value, !isSelected);
-    }
+    };
 
-    if (menuItems[i].action == MenuAction::AUTO_PAGE_TURN) {
-      // Render current page turn value on the right edge of the content area.
-      const auto value = pageTurnLabels[selectedPageTurnOption];
-      const auto width = renderer.getTextWidth(UI_10_FONT_ID, value);
-      renderer.drawText(UI_10_FONT_ID, contentX + contentWidth - 20 - width, displayY, value, !isSelected);
+    switch (menuItems[i].action) {
+      case MenuAction::FONT_SIZE:
+        drawValue(I18N.get(fontSizeLabels[SETTINGS.fontSize]));
+        break;
+      case MenuAction::LINE_SPACING:
+        drawValue(I18N.get(lineSpacingLabels[SETTINGS.lineSpacing]));
+        break;
+      case MenuAction::SCREEN_MARGIN: {
+        const auto value = std::to_string(SETTINGS.screenMargin);
+        drawValue(value.c_str());
+        break;
+      }
+      case MenuAction::PARAGRAPH_ALIGNMENT:
+        drawValue(I18N.get(paragraphAlignmentLabels[SETTINGS.paragraphAlignment]));
+        break;
+      case MenuAction::HYPHENATION:
+        drawValue(I18N.get(SETTINGS.hyphenationEnabled ? StrId::STR_STATE_ON : StrId::STR_STATE_OFF));
+        break;
+      case MenuAction::ROTATE_SCREEN: {
+        const char* value = I18N.get(orientationLabels[pendingOrientation]);
+        drawValue(value);
+        break;
+      }
+      case MenuAction::AUTO_PAGE_TURN: {
+        const auto value = pageTurnLabels[selectedPageTurnOption];
+        drawValue(value);
+        break;
+      }
+      default:
+        break;
     }
   }
 
