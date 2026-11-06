@@ -190,6 +190,7 @@ inline std::vector<StrId> buildLongPressMenuValues() {
   if (BoardConfig::hasHomeKey()) values.push_back(StrId::STR_READER_MENU);
   values.push_back(StrId::STR_SAVE_CLIPPING);
   values.push_back(StrId::STR_FOOTNOTES);
+  values.push_back(StrId::STR_REVEAL_STATUS_BAR);
   return values;
 }
 
@@ -229,6 +230,7 @@ inline std::vector<ShortPowerButtonOption> shortPowerButtonOptions() {
                                                  {StrId::STR_FORCE_REFRESH, CrossPointSettings::FORCE_REFRESH},
                                                  {StrId::STR_FOOTNOTES, CrossPointSettings::FOOTNOTES}};
   options.reserve(CrossPointSettings::SHORT_PWRBTN_COUNT);
+  options.push_back({StrId::STR_REVEAL_STATUS_BAR, CrossPointSettings::PWR_STATUS_BAR});
   if (BoardConfig::hasTouch()) {
     options.push_back({StrId::STR_CONFIRM, CrossPointSettings::PWR_CONFIRM});
   } else {

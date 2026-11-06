@@ -28,8 +28,8 @@
 #include "activities/reader/ReaderUtils.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
-#include "images/Logo120.h"
 #include "images/MoonIcon.h"
+#include "util/CustomLogo.h"
 
 namespace {
 // Metalio: B/W sleep images use the full 0xF7 waveform instead of HALF (two
@@ -708,7 +708,8 @@ void SleepActivity::onEnter() {
 
   const uint8_t sleepScreen = SETTINGS.sleepScreen;
   if (sleepScreen == CrossPointSettings::SLEEP_SCREEN_MODE::TRANSPARENT_CUSTOM ||
-      sleepScreen == CrossPointSettings::SLEEP_SCREEN_MODE::COVER_TRANSPARENT) {
+      sleepScreen == CrossPointSettings::SLEEP_SCREEN_MODE::COVER_TRANSPARENT ||
+      (sleepScreen == CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM_TRANSPARENT && fromReaderPage)) {
     // Transparent mode retains the current framebuffer. Materialize any
     // output-level inversion first so the retained content keeps its visible
     // polarity after the display driver returns to normal.
@@ -740,6 +741,7 @@ void SleepActivity::onEnter() {
     case (CrossPointSettings::SLEEP_SCREEN_MODE::BLANK):
       return renderBlankSleepScreen();
     case (CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM):
+    case (CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM_TRANSPARENT):
       return renderCustomSleepScreen();
     case (CrossPointSettings::SLEEP_SCREEN_MODE::COVER):
       return renderCoverSleepScreen();
@@ -802,8 +804,8 @@ bool SleepActivity::renderCustomSleepBmp(const std::string& path) const {
 }
 
 void SleepActivity::renderCustomSleepScreen() const {
-  // /sleep.bmp on the SD root takes priority over both custom sleep directories.
-  if (renderCustomSleepBmp("/sleep.bmp")) return;
+  // Fixed root images take priority except in the random-only hybrid mode.
+  if (SETTINGS.sleepScreen != CrossPointSettings::CUSTOM_TRANSPARENT && renderCustomSleepBmp("/sleep.bmp")) return;
 
   std::string selectedPath;
   selectRandomSleepFile("/.sleep", "/sleep", SleepRecentKind::Standard, selectedPath);
@@ -820,11 +822,10 @@ void SleepActivity::renderCustomSleepScreen() const {
 // sequence, used once for the sleep image. It never runs the multi-flash GC
 // waveform (0xF7) that FULL_REFRESH selects (#2471's blinking complaint).
 void SleepActivity::renderDefaultSleepScreen() const {
-  const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
   renderer.clearScreen();
-  renderer.drawImage(Logo120, (pageWidth - 120) / 2, (pageHeight - 120) / 2, 120, 120);
+  CustomLogo::draw(renderer);
   renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 70, tr(STR_CROSSPOINT), true, EpdFontFamily::BOLD);
   renderer.drawCenteredText(SMALL_FONT_ID, pageHeight / 2 + 95, tr(STR_SLEEPING));
 
@@ -1008,8 +1009,10 @@ bool SleepActivity::renderSleepOverlayPath(const std::string& path) const {
 }
 
 void SleepActivity::renderTransparentCustomSleepScreen() const {
-  if (renderSleepOverlayPath(TRANSPARENT_SLEEP_ROOT_BMP)) return;
-  if (renderSleepOverlayPath(TRANSPARENT_SLEEP_ROOT_PNG)) return;
+  if (SETTINGS.sleepScreen != CrossPointSettings::CUSTOM_TRANSPARENT) {
+    if (renderSleepOverlayPath(TRANSPARENT_SLEEP_ROOT_BMP)) return;
+    if (renderSleepOverlayPath(TRANSPARENT_SLEEP_ROOT_PNG)) return;
+  }
 
   std::string selectedPath;
   selectRandomSleepFile(TRANSPARENT_SLEEP_DIR, TRANSPARENT_SLEEP_LEGACY_DIR, SleepRecentKind::Overlay, selectedPath);

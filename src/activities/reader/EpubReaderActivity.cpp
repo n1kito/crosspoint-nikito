@@ -633,6 +633,7 @@ void EpubReaderActivity::openClippings() {
 }
 
 void EpubReaderActivity::loop() {
+  expireStatusBarReveal();
   if (loadFailurePopup.isActive()) {
     loadFailurePopup.handleInput(mappedInput, [this] { requestUpdate(); });
     return;
@@ -767,6 +768,7 @@ void EpubReaderActivity::loop() {
     return;
   }
 
+  if (handleStatusBarInput()) return;
   int selectionX = 0;
   int selectionY = 0;
   if (!atEndOfBook && SETTINGS.touchReaderControls && mappedInput.wasScreenLongPress(selectionX, selectionY)) {
@@ -1639,9 +1641,9 @@ void EpubReaderActivity::renderBook() {
   orientedMarginLeft += SETTINGS.screenMargin;
   orientedMarginRight += SETTINGS.screenMargin;
 
-  const uint8_t statusBarHeight = UITheme::getInstance().getStatusBarHeight();
+  const uint8_t statusBarHeight = SETTINGS.statusBarHiddenByDefault ? 0 : UITheme::getInstance().getStatusBarHeight();
 
-  if (automaticPageTurnActive &&
+  if (!SETTINGS.statusBarHiddenByDefault && automaticPageTurnActive &&
       (statusBarHeight == 0 || statusBarHeight == UITheme::getInstance().getProgressBarHeight())) {
     orientedMarginBottom +=
         std::max(SETTINGS.screenMargin,
@@ -2106,7 +2108,7 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
       page->renderImages(renderer, fontId, orientedMarginLeft, orientedMarginTop);
     }
     // A4 replaces the whole frame with its gray planes, including the status bar.
-    if (absoluteImageGrayscale || BoardConfig::isEegoA4()) renderStatusBar();
+    if (absoluteImageGrayscale || BoardConfig::isEegoA4() || SETTINGS.statusBarHiddenByDefault) renderStatusBar();
   };
 
   if (pageHasImagesNeedingDecode) {
@@ -2428,6 +2430,19 @@ void EpubReaderActivity::drawClippingHighlights(const Page& page, const int font
 }
 
 void EpubReaderActivity::renderStatusBar() const {
+  if (!isStatusBarVisible()) return;
+  if (SETTINGS.statusBarHiddenByDefault) {
+    int top, right, bottom, left;
+    renderer.getOrientedViewableTRBL(&top, &right, &bottom, &left);
+    const int height = UITheme::getInstance().getStatusBarHeight();
+    if (height == 0) return;
+    const int y = std::max(0, renderer.getScreenHeight() - bottom - height - 4 +
+                                  std::min(0, static_cast<int>(BoardConfig::ACTIVE.statusBarOffsetY)));
+    // Differential gray planes are masks: zero means leave the B/W bar alone.
+    const bool maskPlane = renderer.getRenderMode() != GfxRenderer::BW && !renderer.grayPlanesAreAbsolute();
+    renderer.fillRect(0, y, renderer.getScreenWidth(), renderer.getScreenHeight() - y, maskPlane);
+    if (maskPlane) return;
+  }
   const int currentPage = section ? section->currentPage + 1 : 1;
   const float pageCount = section ? section->estimatedTotalPages() : 1;
   const float sectionChapterProg = (pageCount > 0) ? (static_cast<float>(currentPage) / pageCount) : 0;

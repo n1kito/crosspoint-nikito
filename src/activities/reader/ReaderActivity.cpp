@@ -219,9 +219,11 @@ bool ReaderActivity::handleEndOfBookPageTurn(const bool prevTriggered, const boo
 }
 
 void ReaderActivity::loop() {
+  expireStatusBarReveal();
   rememberBookOnceRendered();
   clearEndOfBookOptionsIfNeeded();
   if (handleEndOfBookMenu()) return;
+  if (handleStatusBarInput()) return;
   if (handleFormatInput()) return;
   if (handleBackNavigation()) return;
 
@@ -244,6 +246,9 @@ void ReaderActivity::loop() {
 }
 
 void ReaderActivity::render(RenderLock&&) {
+  pageRenderSucceeded = false;
+  // A stacked reader does not tick; returning from a child may render before loop().
+  statusBarReveal.expire(millis());
   if (isAtEndOfBook()) {
     if (!endOfBookOptions) {
       endOfBookOptions = makeUniqueNoThrow<EndOfBookOptions>(renderer);
@@ -276,4 +281,30 @@ bool ReaderActivity::handleForcedRefresh() {
   }
   requestUpdate();
   return true;
+}
+
+bool ReaderActivity::handleStatusBarInput() {
+  if (inputOverPage()) return false;
+  const bool shortcut = mappedInput.homeButtonAction() == HomeButtonAction::RevealStatusBar;
+  const bool confirmHold = !mappedInput.hasTouch() &&
+                           SETTINGS.longPressMenuFunction == CrossPointSettings::LP_MENU_STATUS_BAR &&
+                           mappedInput.wasLongPressed(MappedInputManager::Button::Confirm, ReaderUtils::SKIP_HOLD_MS);
+  if (!shortcut && !confirmHold) return false;
+  if (SETTINGS.statusBarHiddenByDefault) {
+    {
+      RenderLock lock(*this);
+      statusBarReveal.show(millis());
+    }
+    requestUpdate();
+  }
+  return true;
+}
+
+void ReaderActivity::expireStatusBarReveal() {
+  RenderLock lock(RenderLock::Mode::Try);
+  if (lock.ownsLock() && statusBarReveal.expire(millis())) requestUpdate();
+}
+
+bool ReaderActivity::isStatusBarVisible() const {
+  return !SETTINGS.statusBarHiddenByDefault || statusBarReveal.isVisible();
 }

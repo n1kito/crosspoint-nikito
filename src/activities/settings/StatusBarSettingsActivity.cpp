@@ -26,6 +26,7 @@ enum MenuItem {
   ITEM_TITLE,
   ITEM_BATTERY,
   ITEM_XTC_STATUS_BAR,
+  ITEM_HIDDEN_BY_DEFAULT,
   ITEM_CLOCK,  // RTC boards only
   ITEM_COUNT
 };
@@ -43,6 +44,7 @@ const StrId menuNames[FULL_MENU_ITEMS] = {
     StrId::STR_TITLE,
     StrId::STR_BATTERY,
     StrId::STR_XTC_STATUS_BAR,
+    StrId::STR_STATUS_BAR_HIDDEN_BY_DEFAULT,
     StrId::STR_CLOCK,
 };
 
@@ -118,6 +120,9 @@ void StatusBarSettingsActivity::activateIndex(const int index) {
 
 void StatusBarSettingsActivity::handleSelection() {
   switch (nav.selected) {
+    case ITEM_HIDDEN_BY_DEFAULT:
+      SETTINGS.statusBarHiddenByDefault = !SETTINGS.statusBarHiddenByDefault;
+      break;
     case ITEM_CHAPTER_PAGE_COUNT:
       SETTINGS.statusBarChapterPageCount = (SETTINGS.statusBarChapterPageCount + 1) % 2;
       break;
@@ -204,6 +209,7 @@ void StatusBarSettingsActivity::buildScreen(UiScreen& screen) {
   GUI.setCheckboxRow(rowItems_[ITEM_CHAPTER_PAGE_COUNT], SETTINGS.statusBarChapterPageCount);
   GUI.setCheckboxRow(rowItems_[ITEM_BOOK_PROGRESS_PERCENTAGE], SETTINGS.statusBarBookProgressPercentage);
   GUI.setCheckboxRow(rowItems_[ITEM_BATTERY], SETTINGS.statusBarBattery);
+  GUI.setCheckboxRow(rowItems_[ITEM_HIDDEN_BY_DEFAULT], SETTINGS.statusBarHiddenByDefault);
 
   fui::ListProps props;
   props.items = rowItems_;

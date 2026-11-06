@@ -20,6 +20,7 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
     values[CrossPointSettings::QUICK_RESUME] = StrId::STR_QUICK_RESUME;
     values[CrossPointSettings::TRANSPARENT_CUSTOM] = StrId::STR_TRANSPARENT;
     values[CrossPointSettings::COVER_TRANSPARENT] = StrId::STR_COVER_TRANSPARENT;
+    values[CrossPointSettings::CUSTOM_TRANSPARENT] = StrId::STR_CUSTOM_TRANSPARENT;
     return values;
   }();
   static constexpr auto STATUS_BAR_CLOCK_VALUES = [] {
@@ -32,6 +33,8 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
 
   const auto emit = [visit, context](auto&& info) { visit(context, info); };
   // --- Display ---
+  emit(SettingInfo::String(StrId::STR_LOGO, SETTINGS.logoFilename, sizeof(SETTINGS.logoFilename), "logoFilename")
+           .withWebHidden());
   emit(SettingInfo::StaticEnum(StrId::STR_SLEEP_SCREEN, &CrossPointSettings::sleepScreen, SLEEP_SCREEN_VALUES,
                                "sleepScreen", StrId::STR_CAT_DISPLAY));
   emit(SettingInfo::Enum(StrId::STR_SLEEP_COVER_MODE, &CrossPointSettings::sleepScreenCoverMode,
@@ -324,6 +327,8 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
       },
       "koSyncClippings", StrId::STR_KOREADER_SYNC));
   // --- Status Bar Settings (web-only, uses StatusBarSettingsActivity) ---
+  emit(SettingInfo::Toggle(StrId::STR_STATUS_BAR_HIDDEN_BY_DEFAULT, &CrossPointSettings::statusBarHiddenByDefault,
+                           "statusBarHiddenByDefault", StrId::STR_CUSTOMISE_STATUS_BAR));
   emit(SettingInfo::Toggle(StrId::STR_CHAPTER_PAGE_COUNT, &CrossPointSettings::statusBarChapterPageCount,
                            "statusBarChapterPageCount", StrId::STR_CUSTOMISE_STATUS_BAR));
   emit(SettingInfo::Toggle(StrId::STR_BOOK_PROGRESS_PERCENTAGE, &CrossPointSettings::statusBarBookProgressPercentage,

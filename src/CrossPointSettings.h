@@ -27,6 +27,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     QUICK_RESUME = 6,
     TRANSPARENT_CUSTOM = 7,
     COVER_TRANSPARENT = 8,
+    CUSTOM_TRANSPARENT = 9,
     SLEEP_SCREEN_MODE_COUNT
   };
   enum SLEEP_SCREEN_COVER_MODE { FIT = 0, CROP = 1, SLEEP_SCREEN_COVER_MODE_COUNT };
@@ -174,6 +175,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     PWR_BOOKMARK = 7,
     PWR_SYNC = 8,
     PWR_READER_MENU = 9,
+    PWR_STATUS_BAR = 10,
     SHORT_PWRBTN_COUNT
   };
 
@@ -187,6 +189,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     LP_MENU_READER_MENU = 4,
     LP_MENU_CREATE_CLIPPING = 5,
     LP_MENU_FOOTNOTES = 6,
+    LP_MENU_STATUS_BAR = 7,
     LONG_PRESS_MENU_FUNCTION_COUNT
   };
 
@@ -252,6 +255,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
 
   // Sleep screen settings
   uint8_t sleepScreen = DARK;
+  char logoFilename[96] = "";
   // Night mode: inverted output polarity, applied to every activity per
   // render by ActivityManager. The sleep screen opts out itself.
   uint8_t screenInverted = 0;
@@ -260,6 +264,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // Sleep screen cover filter
   uint8_t sleepScreenCoverFilter = NO_FILTER;
   // Status bar settings
+  uint8_t statusBarHiddenByDefault = 0;
   uint8_t statusBarChapterPageCount = 1;
   uint8_t statusBarBookProgressPercentage = 1;
   uint8_t statusBarProgressBar = HIDE_PROGRESS;

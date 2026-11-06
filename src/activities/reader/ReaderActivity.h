@@ -7,22 +7,32 @@
 
 #include "EndOfBookOptions.h"
 #include "ReaderSession.h"
+#include "StatusBarReveal.h"
 #include "activities/Activity.h"
 
 class ReaderActivity : public Activity {
-  friend class ActivityManager;  // turns pages for a Bluetooth remote (ActivityManager::remoteTurn)
+  friend class ActivityManager;  // Owns reader transitions and Bluetooth remote routing.
 
  protected:
   std::string bookPath;
   int pagesUntilFullRefresh = 0;
   bool forcedRefreshPending = false;
+  StatusBarReveal statusBarReveal;
+  bool handleStatusBarInput();
+  void expireStatusBarReveal();
+  bool isStatusBarVisible() const;
 
   std::unique_ptr<EndOfBookOptions> endOfBookOptions;
   std::atomic<bool> endOfBookOptionsReady{false};
   ReaderSession readerSession;
   std::atomic<bool> pageRendered{false};
+  // Latest render result, guarded by RenderLock; pageRendered remains session readiness.
+  bool pageRenderSucceeded = false;
   bool bookRemembered = false;
-  void markPageRendered() { pageRendered.store(true, std::memory_order_release); }
+  void markPageRendered() {
+    pageRenderSucceeded = true;
+    pageRendered.store(true, std::memory_order_release);
+  }
   void rememberBookOnceRendered();
 
   explicit ReaderActivity(const char* name, GfxRenderer& renderer, MappedInputManager& mappedInput,
@@ -64,6 +74,7 @@ class ReaderActivity : public Activity {
   bool endOfBookMenuActive() const;
   /** True while a toolbar, panel or menu over the page owns the device keys: a remote turn is refused. */
   virtual bool inputOverPage() const { return endOfBookMenuActive(); }
+  bool hasVisiblePage() const { return pageRenderSucceeded && !isAtEndOfBook() && !inputOverPage(); }
   bool handleEndOfBookMenu(bool suppressConfirmRelease = false);
   bool handleEndOfBookPageTurn(bool prevTriggered, bool nextTriggered);
   void clearEndOfBookOptionsIfNeeded();

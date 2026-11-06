@@ -103,7 +103,7 @@ void ActivityManager::renderTaskLoop() {
 }
 
 void ActivityManager::loop() {
-  if (mappedInput.consumeSuppressedRelease()) return;
+  if (pendingAction != PendingAction::ReplaceForSleep && mappedInput.consumeSuppressedRelease()) return;
 
   if (currentActivity && currentActivity->requiresExclusiveStorageLoop()) {
     currentActivity->loop();
@@ -116,7 +116,8 @@ void ActivityManager::loop() {
     return;
   }
 
-  if (currentActivity) {
+  // A sleep replacement must retain the final frame, without another input or background-build tick.
+  if (currentActivity && pendingAction != PendingAction::ReplaceForSleep) {
     if (!currentActivity->isHomeActivity() && mappedInput.wasHomeGesture()) {
       if (currentActivity->handleHomeGesture()) {
         return;
@@ -347,7 +348,19 @@ void ActivityManager::goToReader(std::string path, const bool allowFastInitialRe
 }
 
 void ActivityManager::goToSleep(bool fromTimeout) {
-  replaceActivity(std::make_unique<SleepActivity>(renderer, mappedInput, fromTimeout));
+  bool fromReaderPage = false;
+  if (SETTINGS.sleepScreen == CrossPointSettings::CUSTOM_TRANSPARENT) {
+    RenderLock lock;
+    fromReaderPage = isForegroundReader() && static_cast<ReaderActivity*>(currentActivity.get())->hasVisiblePage();
+  }
+  if (fromReaderPage &&
+      !(fromTimeout && SETTINGS.quickResumeSleepScreen == CrossPointSettings::QUICK_RESUME_AFTER_TIMEOUT)) {
+    // Sleep-event popups or a background build may have replaced the page's framebuffer.
+    requestUpdateAndWait();
+    RenderLock lock;
+    fromReaderPage = isForegroundReader() && static_cast<ReaderActivity*>(currentActivity.get())->hasVisiblePage();
+  }
+  replaceActivity(std::make_unique<SleepActivity>(renderer, mappedInput, fromTimeout, fromReaderPage));
   if (pendingAction == PendingAction::Replace) pendingAction = PendingAction::ReplaceForSleep;
   loop();  // Important: sleep screen must be rendered immediately, the caller will go to sleep right after this returns
 }

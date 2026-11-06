@@ -568,18 +568,21 @@ The **Sleep Screen** setting controls what is displayed when the device goes to 
 | **Cover + Custom** | The cover of the currently open book, shown only while actively reading. Falls back to **Custom** behavior when not reading. |
 | **Transparent**    | A BMP or PNG overlay drawn over the current screen. Supports PNG and 32-bit BGRA alpha transparency, and treats white as transparent in regular BMPs. Falls back to **Dark** if no valid overlay image is found. |
 | **Cover + Transparent** | The **Transparent** overlay drawn over the cover of the last opened book, from any screen. Falls back to **Transparent** behavior if there is no book cover, and to the plain cover if no valid overlay image is found. |
+| **Custom + Transparent** | A random overlay over an actual book page, or a random full-screen custom image from other screens, including reader menus. Uses image folders and ignores fixed root files. Falls back to the default sleep screen if the selected image cannot be used. |
 | **None**           | A blank screen.                                                                                                              |
 
 #### Cover settings
 
-When using **Custom**, **Cover**, **Cover + Custom** or **Cover + Transparent**, two additional settings apply:
+When using **Custom**, **Cover**, **Cover + Custom**, **Cover + Transparent** or the full-screen custom branch of **Custom + Transparent**, two additional settings apply:
 
 - **Sleep Screen Cover Mode**: **Fit** (scale to fit, white borders) or **Crop** (scale and crop to fill the screen).
 - **Sleep Screen Cover Filter**: **None** (grayscale), **Contrast** (black & white), or **Inverted** (inverted black & white).
 
 #### Custom images
 
-To use custom sleep images, set the sleep screen mode to **Custom** or **Cover + Custom**, then place images on the SD card:
+To use custom sleep images, set the sleep screen mode to **Custom**, **Cover + Custom** or **Custom + Transparent**, then place images on the SD card:
+
+**Custom + Transparent** chooses a random transparent overlay when sleeping directly from a book page and a random full-screen custom image from other screens, including reader menus, dictionary screens and the end-of-book screen. It uses the same image folders described below, but ignores the fixed root files (`sleep.bmp`, `sleep-overlay.bmp` and `sleep-overlay.png`) so both choices remain random. If the selected image cannot be used, the default sleep screen is shown. **Quick Resume on Timeout**, when enabled, still takes priority for automatic sleep.
 
 - **Multiple Images (recommended):** Create a `.sleep` directory in the root of the SD card and place any number of `.bmp` images inside. One will be randomly selected each time the device sleeps. (A directory named `sleep` is also accepted as a fallback.)
 - **Single Image:** Place a file named `sleep.bmp` in the root directory. This takes priority over the `.sleep`/`sleep` directories.
@@ -588,7 +591,7 @@ Like book covers, custom images are scaled to the screen using **Sleep Screen Co
 
 #### Transparent overlay images
 
-To use transparent sleep overlays, set the sleep screen mode to **Transparent** or **Cover + Transparent**, then place BMP or PNG files on the SD card:
+To use transparent sleep overlays, set the sleep screen mode to **Transparent**, **Cover + Transparent** or **Custom + Transparent**, then place BMP or PNG files on the SD card:
 
 - **Multiple Images (recommended):** Create a `.sleep-overlay` directory in the root of the SD card and place any number of valid overlay `.bmp` or `.png` images inside. One will be randomly selected each time the device sleeps. A directory named `sleep-overlay` is also accepted as a fallback.
 - **Single Image:** Place `sleep-overlay.bmp` or `sleep-overlay.png` in the root directory. A root BMP takes priority over a root PNG, and both take priority over the `.sleep-overlay`/`sleep-overlay` directories.

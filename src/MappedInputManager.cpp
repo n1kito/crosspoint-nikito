@@ -46,6 +46,9 @@ void MappedInputManager::update(const bool deferHomeButtonAction) const {
       case CrossPointSettings::PWR_READER_MENU:
         homeAction = HomeButtonAction::ReaderMenu;
         break;
+      case CrossPointSettings::PWR_STATUS_BAR:
+        homeAction = HomeButtonAction::RevealStatusBar;
+        break;
       default:
         break;
     }

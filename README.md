@@ -17,6 +17,9 @@ Check [our Devices page](https://crosspointreader.com/devices) for the full list
 
 ## What can CrossPoint do?
 
+This Nikito branch adds [status-bar visibility controls, an SD-card logo picker, and a hybrid sleep-screen mode](./docs/nikito-customisations.md)
+to upstream 2.0.0. The official logo is the default; the flower is available in [sd-card/logos](./sd-card/logos/flower.bmp).
+
 - **Reader engine**: EPUB 2/3 rendering with embedded-style option, image handling, hyphenation, kerning, adaptive table layouts, native CJK ruby annotations, chapter navigation, footnotes, bookmarks, dictionary lookups ([StarDict](docs/dictionary.md)), go-to-percent, auto page turn, orientation control, focus reading, KOReader progress sync and more.
 
 - **Various formats**: native handling for `.epub`, `.xtc/.xtch`, `.txt`, and `.bmp`.

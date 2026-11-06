@@ -43,7 +43,7 @@ unsigned long millis() { return 1000; }
 constexpr unsigned long TOUCH_HELD_OVERRIDE_WINDOW_MS = 250;
 struct CrossPointSettings {
   enum { VIBRATION_OFF, VIBRATION_TOUCH_PAGE };
-  enum { IGNORE = 0, PWR_BOOKMARK = 7, PWR_SYNC = 8, PWR_READER_MENU = 9 };
+  enum { IGNORE = 0, PWR_BOOKMARK = 7, PWR_SYNC = 8, PWR_READER_MENU = 9, PWR_STATUS_BAR = 10 };
   int shortPwrBtn = IGNORE;
   int vibration = VIBRATION_OFF, hapticIntensity = 0;
   int homeButtonTapAction = 0, homeButtonDoubleTapAction = 0, homeButtonLongPressAction = 0;
@@ -101,6 +101,15 @@ int main() {
   }
   gpio.held = false;
   assert(input.injectRemoteClick(RemoteButton::Back));
+  // A released power click carries the configured reader shortcut for one frame.
+  SETTINGS.shortPwrBtn = CrossPointSettings::PWR_STATUS_BAR;
+  gpio.button = static_cast<uint8_t>(Button::Power);
+  gpio.released = true;
+  input.update();
+  assert(input.homeButtonAction() == HomeButtonAction::RevealStatusBar);
+  gpio.released = false;
+  input.update();
+  assert(input.homeButtonAction() == HomeButtonAction::Ignore);
 }
 """
 manager_source = (ROOT / "src/activities/ActivityManager.cpp").read_text()
